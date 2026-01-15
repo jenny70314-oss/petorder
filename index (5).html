@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PetWise Pro - 寵物產品管理系統</title>
+    <!-- 載入必要資源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+
+    <style>
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            position: fixed;
+            width: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        #root { height: 100%; display: flex; flex-direction: column; }
+        .scroll-container {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 120px;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        input, select, textarea { font-size: 16px !important; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        const { 
+            ShoppingCart, History, Package, Plus, Trash2, Search, 
+            LayoutGrid, ClipboardCheck, LogOut, ShieldCheck, 
+            Smartphone, Save, X, ChevronDown, User, Lock, Mail, FileSpreadsheet, Camera, CreditCard, Send, Minus, Settings, BellRing
+        } = LucideReact;
+
+        const ADMIN_PASSWORD = '0000';
+        const STORAGE_KEY = 'petwise_pro_vfinal';
+
+        // --- 完整原始商品清單 ---
+        const INITIAL_PRODUCTS = [
+            // 風乾零食
+            { category: "風乾零食", name: "貓咪抗拒不了貓草餅乾 catnip cookie", wholesalePrice: 163, retailPrice: 250 },
+            { category: "風乾零食", name: "無雞不可，經典雞胸肉乾 Chicken Breast Jerky", wholesalePrice: 163, retailPrice: 250 },
+            { category: "風乾零食", name: "我愛吃鴨鴨，一比一比鴨鴨鴨胸肉乾 Duck Breast Jerky", wholesalePrice: 195, retailPrice: 300 },
+            { category: "風乾零食", name: "喀滋喀滋鴨氣管，毛孩專屬鴨氣管 Duck Trachea", wholesalePrice: 137, retailPrice: 210 },
+            { category: "風乾零食", name: "控制熱量好選擇，鴨鴨繞南瓜 Duck Around Pumpkin", wholesalePrice: 169, retailPrice: 260 },
+            { category: "風乾零食", name: "控制熱量好選擇，雞雞繞南瓜 Chicken Around Pumpkin", wholesalePrice: 163, retailPrice: 250 },
+            { category: "風乾零食", name: "夢幻星星零食，秋葵鴨肉肉 Okra Duck", wholesalePrice: 169, retailPrice: 260 },
+            { category: "風乾零食", name: "夢幻星星零食，秋葵雞肉肉 Okra Chicken", wholesalePrice: 163, retailPrice: 250 },
+            { category: "風乾零食", name: "補充膳食纖維，小雞繞紅蘿蔔 Chicken Around Red Radish", wholesalePrice: 195, retailPrice: 300 },
+            { category: "風乾零食", name: "健康肉餅，黃金薑黃雞肉餅 Turmeric Chicken", wholesalePrice: 163, retailPrice: 250 },
+            { category: "風乾零食", name: "健康肉餅，黃金薑黃鴨肉餅 Turmeric Duck", wholesalePrice: 195, retailPrice: 300 },
+            { category: "風乾零食", name: "營養均衡，紅藜麥鴨肉條 Red Quinoa Duck Strips", wholesalePrice: 163, retailPrice: 250 },
+            { category: "風乾零食", name: "營養均衡，紅藜麥雞肉條 Red Quinoa Chicken Strips", wholesalePrice: 130, retailPrice: 200 },
+            { category: "風乾零食", name: "牛肉塊 Beef Chunks", wholesalePrice: 195, retailPrice: 300 },
+            { category: "風乾零食", name: "藍莓芝士雞肉餅 Blueberry Cheese Chicken Patty", wholesalePrice: 195, retailPrice: 300 },
+            { category: "風乾零食", name: "蘋果雞肉餅 Apple chichen", wholesalePrice: 195, retailPrice: 300 },
+            { category: "風乾零食", name: "迷迭香牛肉餅 Rosemary Steak", wholesalePrice: 137, retailPrice: 210 },
+            { category: "風乾零食", name: "羅勒雞肉條 Sweet Basil Chicken", wholesalePrice: 130, retailPrice: 200 },
+            { category: "風乾零食", name: "百里香鴨肉 Thyme Duck", wholesalePrice: 137, retailPrice: 210 },
+            { category: "風乾零食", name: "經典牛筋片 Beef Tendon", wholesalePrice: 195, retailPrice: 300 },
+            { category: "風乾零食", name: "丁香魚小魚乾 Clove Fish", wholesalePrice: 117, retailPrice: 180 },
+            { category: "風乾零食", name: "鬆餅雞肉肉-芝芝藍莓 Chichen Waffle Bluebreey Cheese", wholesalePrice: 163, retailPrice: 250 },
+            { category: "風乾零食", name: "鬆餅雞肉肉-蔬菜 Chichen Waffle Vegetable", wholesalePrice: 163, retailPrice: 250 },
+            { category: "風乾零食", name: "鬆餅雞肉肉-鴨鴨芝芝藍莓 Duck Waffle Blueberry Cheese", wholesalePrice: 163, retailPrice: 250 },
+            { category: "風乾零食", name: "雞肉鬆鬆 chicken floss", wholesalePrice: 130, retailPrice: 200 },
+
+            // 凍乾零食
+            { category: "凍乾零食", name: "嗷嗚原形脆，雞小方 Freeze Dried Chicken", wholesalePrice: 163, retailPrice: 250 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，雞大排 Freeze Dried Chicken Breast", wholesalePrice: 163, retailPrice: 250 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，雞小胗 Freeze-Dried Chicken Gizzards", wholesalePrice: 137, retailPrice: 210 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，雞皇冠 Freeze-Dried Chicken Combs", wholesalePrice: 137, retailPrice: 210 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，雞細條 Freeze-Dried Chicken Tenders", wholesalePrice: 163, retailPrice: 250 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，鴨細條 Freeze-Dried Duck Tenders", wholesalePrice: 182, retailPrice: 280 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，脆鴨酥 Freeze-Dried Duck Trachea", wholesalePrice: 137, retailPrice: 210 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，鴨小舌 Freeze-Dried Duck Tongue", wholesalePrice: 163, retailPrice: 250 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，牛小方 Freeze-Dried Beef Cubes", wholesalePrice: 182, retailPrice: 280 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，羊小方 Freeze-Dried Lamb Cubes", wholesalePrice: 182, retailPrice: 280 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，鮭小方 Freeze-Dried Salmon Cubes", wholesalePrice: 195, retailPrice: 300 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，鮭大排 Freeze-Dried Salmon Fillet Slice", wholesalePrice: 195, retailPrice: 300 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，丁小魚 Freeze-Dried Clove Fish", wholesalePrice: 182, retailPrice: 280 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，小蝦蝦 Freeze-Dried Shrimp", wholesalePrice: 182, retailPrice: 280 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，活力羊菜方 Freeze-Dried Lamb & Veggie Cubes", wholesalePrice: 221, retailPrice: 340 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，強健牛菜方 Freeze-Dried Beef & Veggie Cubes", wholesalePrice: 221, retailPrice: 340 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，腸胃雞菜方 Freeze-Dried Chicken & Veggie Cubes", wholesalePrice: 221, retailPrice: 340 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，元氣鴨菜方 Freeze-Dried Duck & Veggie Cubes", wholesalePrice: 221, retailPrice: 340 },
+            { category: "凍乾零食", name: "嗷嗚原形脆，蔬菜纖方 Freeze-Dried Seasonal Veggie Cubes", wholesalePrice: 208, retailPrice: 320 },
+
+            // 用品
+            { category: "用品", name: "狗狗慢食墊-蜜桃粉", wholesalePrice: 200, retailPrice: 310 },
+            { category: "用品", name: "狗狗慢食墊-石灰藍", wholesalePrice: 200, retailPrice: 310 },
+            { category: "用品", name: "狗狗慢食墊-蜂蜜黃", wholesalePrice: 200, retailPrice: 310 },
+            { category: "用品", name: "狗狗慢食墊-灰草綠", wholesalePrice: 200, retailPrice: 310 },
+            { category: "用品", name: "貓薄荷魚玩具", wholesalePrice: 90, retailPrice: 150 },
+            { category: "用品", name: "冰淇淋綿綿球", wholesalePrice: 250, retailPrice: 350 },
+            { category: "用品", name: "矽膠吸盤餐盤附勺子-小鴨黃", wholesalePrice: 200, retailPrice: 425 },
+            { category: "用品", name: "矽膠吸盤餐盤附勺子-寶寶藍", wholesalePrice: 200, retailPrice: 425 },
+            { category: "用品", name: "矽膠吸盤餐盤附勺子-蜜桃粉", wholesalePrice: 200, retailPrice: 425 },
+            { category: "用品", name: "矽膠吸盤餐盤附勺子-煙灰綠", wholesalePrice: 200, retailPrice: 425 },
+            { category: "用品", name: "矽膠吸盤餐盤-奶白", wholesalePrice: 200, retailPrice: 425 },
+            { category: "用品", name: "牽繩-大狗狗-粉-140cm/2cm", wholesalePrice: 450, retailPrice: 720 },
+            { category: "用品", name: "牽繩-大狗狗-藍", wholesalePrice: 450, retailPrice: 720 },
+            { category: "用品", name: "牽繩-大狗狗-黑加侖", wholesalePrice: 450, retailPrice: 720 },
+            { category: "用品", name: "牽繩-大狗狗-黑", wholesalePrice: 450, retailPrice: 720 },
+            { category: "用品", name: "短牽繩-大狗狗-粉 70cm", wholesalePrice: 400, retailPrice: 620 },
+            { category: "用品", name: "防暴衝胸背-黑S", wholesalePrice: 500, retailPrice: 1200 },
+            { category: "用品", name: "防暴衝胸背-黑M", wholesalePrice: 500, retailPrice: 1200 },
+            { category: "用品", name: "防暴衝胸背-黑L", wholesalePrice: 500, retailPrice: 1200 },
+            { category: "用品", name: "手工逗貓棒 替換頭１", wholesalePrice: 80, retailPrice: 250 },
+            { category: "用品", name: "零食保鮮罐-淺灰粉-S-200ml", wholesalePrice: 180, retailPrice: 290 },
+            { category: "用品", name: "零食保鮮罐-淺灰粉-M-300ml", wholesalePrice: 190, retailPrice: 390 },
+            { category: "用品", name: "零食保鮮罐-淺灰粉-L-600ml", wholesalePrice: 200, retailPrice: 490 },
+            { category: "用品", name: "錐形伊莉莎白圈-奶酪黄-S", wholesalePrice: 320, retailPrice: 600 },
+            { category: "用品", name: "錐形伊莉莎白圈-奶酪黄-M", wholesalePrice: 350, retailPrice: 650 },
+            { category: "用品", name: "花朵伊莉莎白圈-夢幻紫-S", wholesalePrice: 325, retailPrice: 680 },
+            { category: "用品", name: "BITE ME 土撥鼠", wholesalePrice: 580, retailPrice: 880 },
+            { category: "用品", name: "DINGDOG 炸蝦", wholesalePrice: 320, retailPrice: 680 }
+        ].map((p, idx) => ({ ...p, id: `p${idx}`, stock: 100, onShelfCount: 20 }));
+
+        const App = () => {
+            const [view, setView] = useState('auth'); 
+            const [userRole, setUserRole] = useState(null);
+            const [products, setProducts] = useState([]);
+            const [cart, setCart] = useState([]);
+            const [orders, setOrders] = useState([]);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [activeCategory, setActiveCategory] = useState('All');
+            const [editModal, setEditModal] = useState(null);
+            const [authInput, setAuthInput] = useState({ username: '', password: '' });
+            const [orderQuantities, setOrderQuantities] = useState({});
+
+            const [checkoutForm, setCheckoutForm] = useState({
+                date: new Date().toISOString().split('T')[0],
+                companyName: '',
+                customerName: '',
+                phone: '',
+                address: '',
+                taxTitle: '',
+                taxId: '',
+                deliveryTime: '不指定',
+                remarks: ''
+            });
+
+            // 初始化與儲存
+            useEffect(() => {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    setProducts(parsed.products || INITIAL_PRODUCTS);
+                    setOrders(parsed.orders || []);
+                } else {
+                    setProducts(INITIAL_PRODUCTS);
+                }
+            }, []);
+
+            useEffect(() => {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, orders }));
+            }, [products, orders]);
+
+            const categories = useMemo(() => ['All', ...Array.from(new Set(products.map(p => p.category)))], [products]);
+            const cartTotal = cart.reduce((sum, item) => sum + item.wholesalePrice * item.quantity, 0);
+
+            const handleAuth = (e) => {
+                e.preventDefault();
+                if (authInput.password === ADMIN_PASSWORD) {
+                    setUserRole('admin');
+                    setView('inventory');
+                } else if (authInput.username) {
+                    setUserRole('customer');
+                    setView('order');
+                } else {
+                    alert('請輸入帳號或管理員密碼');
+                }
+            };
+
+            const addToCart = (product) => {
+                const qty = orderQuantities[product.id] || 1;
+                setCart(prev => {
+                    const existing = prev.find(item => item.id === product.id);
+                    if (existing) return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + qty } : item);
+                    return [...prev, { ...product, quantity: qty }];
+                });
+                alert('已加入購物車');
+            };
+
+            const submitOrder = () => {
+                if (!checkoutForm.customerName || !checkoutForm.phone) return alert('請填寫姓名與電話');
+                const newOrder = {
+                    id: `ORDER-${Date.now().toString().slice(-6)}`,
+                    ...checkoutForm,
+                    items: [...cart],
+                    totalAmount: cartTotal
+                };
+                setProducts(prev => prev.map(p => {
+                    const item = cart.find(ci => ci.id === p.id);
+                    return item ? { ...p, stock: p.stock - item.quantity, onShelfCount: p.onShelfCount - item.quantity } : p;
+                }));
+                setOrders([newOrder, ...orders]);
+                setCart([]);
+                setView('history');
+                alert('訂單提交成功！');
+            };
+
+            const exportCSV = (order) => {
+                const groupedItems = {};
+                order.items.forEach(item => {
+                    if (!groupedItems[item.category]) groupedItems[item.category] = [];
+                    groupedItems[item.category].push(item);
+                });
+
+                let csvRows = [
+                    `報表日期,${order.date}`,
+                    `公司名稱,${order.companyName || '個人'}`,
+                    '',
+                    '客戶姓名,聯絡電話,收貨地址,總金額',
+                    `"${order.customerName}","${order.phone}","${order.address}",${order.totalAmount}`,
+                    ''
+                ];
+
+                Object.keys(groupedItems).forEach(cat => {
+                    csvRows.push(`--- 分類：${cat} ---`);
+                    csvRows.push('品名,批價,數量,小計');
+                    groupedItems[cat].forEach(i => {
+                        csvRows.push(`"${i.name}",${i.wholesalePrice},${i.quantity},${i.wholesalePrice * i.quantity}`);
+                    });
+                    csvRows.push('');
+                });
+
+                const blob = new Blob(["\uFEFF" + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `訂單_${order.customerName}_${order.date}.csv`;
+                link.click();
+            };
+
+            if (view === 'auth') return (
+                <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-50">
+                    <div className="w-full max-w-sm bg-white p-10 rounded-[3rem] shadow-2xl space-y-8 border-2 border-slate-200 fade-in">
+                        <div className="text-center">
+                            <div className="w-20 h-20 bg-orange-600 rounded-3xl flex items-center justify-center mx-auto shadow-xl mb-4 text-white">
+                                <Smartphone size={40} />
+                            </div>
+                            <h1 className="text-3xl font-black text-slate-900 tracking-tighter italic">PetWise Pro</h1>
+                            <p className="text-xs text-slate-500 font-bold uppercase mt-2">寵物產品批發系統</p>
+                        </div>
+                        <form className="space-y-4" onSubmit={handleAuth}>
+                            <input className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl font-bold" placeholder="使用者名稱" value={authInput.username} onChange={e=>setAuthInput({...authInput, username:e.target.value})} required />
+                            <input className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl font-bold" placeholder="密碼 (管理員 0000)" type="password" value={authInput.password} onChange={e=>setAuthInput({...authInput, password:e.target.value})} />
+                            <button type="submit" className="w-full py-5 bg-orange-600 text-white rounded-[2rem] font-black text-xl shadow-xl active:scale-95 transition-all">進入系統</button>
+                        </form>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="flex flex-col h-full bg-slate-100 font-sans text-slate-900 overflow-hidden">
+                    <header className="bg-white px-6 py-4 flex justify-between items-center shadow-md z-50 pt-10 border-b-2 border-slate-200 shrink-0">
+                        <div className="flex items-center gap-2">
+                            <ShieldCheck className="text-orange-600 w-7 h-7" />
+                            <h1 className="font-black text-2xl text-slate-900 tracking-tighter italic">PetWise</h1>
+                        </div>
+                        {userRole === 'admin' && <div className="px-3 py-1 bg-slate-900 text-white text-[9px] font-black rounded-full uppercase">Admin</div>}
+                        {cart.length > 0 && view !== 'checkout' && (
+                            <button onClick={() => setView('cart')} className="relative p-2.5 bg-orange-50 text-orange-600 rounded-2xl">
+                                <ShoppingCart size={20} />
+                                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">{cart.length}</span>
+                            </button>
+                        )}
+                    </header>
+
+                    <main className="flex-1 relative overflow-hidden fade-in">
+                        {view === 'order' && (
+                            <div className="scroll-container p-4 space-y-4">
+                                <div className="bg-white p-4 rounded-3xl border-2 border-slate-200 shadow-sm flex items-center gap-3">
+                                    <Search className="text-slate-400 w-5 h-5" />
+                                    <input className="flex-1 bg-transparent font-bold outline-none text-sm" placeholder="搜尋產品名稱..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} />
+                                </div>
+                                <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                                    {categories.map(cat => (
+                                        <button key={cat} onClick={()=>setActiveCategory(cat)} className={`px-5 py-2.5 rounded-full text-[10px] font-black whitespace-nowrap uppercase border-2 transition-all ${activeCategory === cat ? 'bg-orange-600 text-white border-orange-600' : 'bg-white text-slate-500 border-slate-200'}`}>{cat === 'All' ? '全部' : cat}</button>
+                                    ))}
+                                </div>
+                                <div className="grid gap-4 pb-20">
+                                    {products.filter(p => (activeCategory === 'All' || p.category === activeCategory) && p.name.includes(searchQuery)).map(p => (
+                                        <div key={p.id} className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-200 shadow-md">
+                                            <p className="text-[9px] font-black text-orange-600 uppercase mb-1">{p.category}</p>
+                                            <h3 className="font-bold text-slate-900 text-base leading-tight mb-4">{p.name}</h3>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <p className="text-xl font-black text-slate-900">${p.wholesalePrice}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <input type="number" className="w-16 p-2 bg-slate-50 border-2 border-slate-200 rounded-xl font-bold text-center" min="1" defaultValue="1" onChange={e => setOrderQuantities({...orderQuantities, [p.id]: parseInt(e.target.value)})} />
+                                                    <button onClick={()=>addToCart(p)} className="px-6 py-3 bg-slate-900 text-white rounded-full font-black text-xs shadow-lg active:scale-95 transition-all">選購</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'inventory' && (
+                            <div className="scroll-container p-4 space-y-4">
+                                <div className="flex justify-between items-center px-2">
+                                    <h2 className="text-2xl font-black text-slate-900 italic tracking-tighter">庫存與價格編輯</h2>
+                                    <button onClick={()=>setEditModal({id: `new-${Date.now()}`, category: '新商品', name: '', wholesalePrice: 0, retailPrice: 0, stock: 0, onShelfCount: 0})} className="p-3 bg-slate-900 text-white rounded-xl"><Plus /></button>
+                                </div>
+                                {products.map(p => (
+                                    <div key={p.id} onClick={()=>setEditModal(p)} className="bg-white p-5 rounded-[2rem] border-2 border-slate-200 shadow-sm border-l-8 border-l-orange-500 flex justify-between items-center transition-transform active:scale-[0.98]">
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 text-sm leading-tight">{p.name}</h3>
+                                            <p className="text-[10px] font-black text-slate-400 mt-2 uppercase">批價: ${p.wholesalePrice} / 零售: ${p.retailPrice}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-[10px] font-black text-slate-400">總庫 / 架上</p>
+                                            <p className="text-lg font-black text-slate-900">{p.stock} / <span className="text-orange-600">{p.onShelfCount}</span></p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {view === 'cart' && (
+                            <div className="scroll-container p-4 space-y-4">
+                                <h2 className="text-2xl font-black text-slate-900 tracking-tighter px-2 italic">確認您的購物車</h2>
+                                {cart.length === 0 ? <div className="text-center py-20 text-slate-400 font-bold uppercase">購物車是空的</div> : (
+                                    <div className="space-y-3 pb-48">
+                                        {cart.map(item => (
+                                            <div key={item.id} className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-200 flex justify-between items-center shadow-md">
+                                                <div className="flex-1">
+                                                    <h3 className="font-bold text-slate-900 text-sm">{item.name}</h3>
+                                                    <p className="text-xs font-black text-orange-600 mt-1">批價: ${item.wholesalePrice}</p>
+                                                </div>
+                                                <div className="flex items-center bg-slate-100 rounded-full p-1 border-2 border-slate-200">
+                                                    <button onClick={()=>{
+                                                        if(item.quantity > 1) setCart(cart.map(i=>i.id===item.id?{...i, quantity:i.quantity-1}:i));
+                                                        else setCart(cart.filter(i=>i.id!==item.id));
+                                                    }} className="w-8 h-8 flex items-center justify-center"><Minus size={14}/></button>
+                                                    <span className="w-10 text-center font-black text-slate-900">{item.quantity}</span>
+                                                    <button onClick={()=>setCart(cart.map(i=>i.id===item.id?{...i, quantity:i.quantity+1}:i))} className="w-8 h-8 flex items-center justify-center"><Plus size={14}/></button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {cart.length > 0 && (
+                                    <div className="fixed bottom-[110px] left-0 right-0 p-8 bg-white border-t-2 border-slate-100 shadow-2xl rounded-t-[4rem] z-40">
+                                        <div className="flex justify-between items-center mb-6 px-4">
+                                            <span className="font-black text-slate-500 text-sm uppercase">結算金額</span>
+                                            <span className="text-4xl font-black text-slate-900">${cartTotal}</span>
+                                        </div>
+                                        <button onClick={()=>setView('checkout')} className="w-full bg-orange-600 text-white py-6 rounded-[2.5rem] font-black text-xl shadow-2xl active:scale-95 transition-all">前往結帳</button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {view === 'checkout' && (
+                            <div className="scroll-container p-6 space-y-6">
+                                <h2 className="text-2xl font-black text-slate-900 italic tracking-tighter">收貨資訊與結帳</h2>
+                                <div className="grid gap-4 pb-32">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black text-slate-400 ml-2">訂單日期 *</label>
+                                        <input className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-bold" type="date" value={checkoutForm.date} onChange={e=>setCheckoutForm({...checkoutForm, date: e.target.value})} />
+                                    </div>
+                                    <input className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-bold" placeholder="所屬公司名稱 *" value={checkoutForm.companyName} onChange={e=>setCheckoutForm({...checkoutForm, companyName: e.target.value})} />
+                                    <input className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-bold" placeholder="收貨人姓名 *" value={checkoutForm.customerName} onChange={e=>setCheckoutForm({...checkoutForm, customerName: e.target.value})} />
+                                    <input className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-bold" placeholder="聯絡電話 *" value={checkoutForm.phone} onChange={e=>setCheckoutForm({...checkoutForm, phone: e.target.value})} />
+                                    <input className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-bold" placeholder="寄送地址" value={checkoutForm.address} onChange={e=>setCheckoutForm({...checkoutForm, address: e.target.value})} />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-bold" placeholder="公司抬頭 (選填)" value={checkoutForm.taxTitle} onChange={e=>setCheckoutForm({...checkoutForm, taxTitle: e.target.value})} />
+                                        <input className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-bold" placeholder="統一編號 (選填)" value={checkoutForm.taxId} onChange={e=>setCheckoutForm({...checkoutForm, taxId: e.target.value})} />
+                                    </div>
+                                    <textarea className="w-full p-4 bg-white border-2 border-slate-200 rounded-2xl font-bold h-24" placeholder="訂單備註..." value={checkoutForm.remarks} onChange={e=>setCheckoutForm({...checkoutForm, remarks: e.target.value})} />
+                                    <button onClick={submitOrder} className="w-full bg-slate-900 text-white py-5 rounded-[2.5rem] font-black text-xl shadow-2xl active:scale-95 transition-all">確認下單</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'history' && (
+                            <div className="scroll-container p-4 space-y-4">
+                                <h2 className="text-2xl font-black text-slate-900 italic tracking-tighter px-2">歷史訂單紀錄</h2>
+                                {orders.length === 0 ? <div className="text-center py-20 text-slate-400 font-bold uppercase">目前沒有任何紀錄</div> : (
+                                    <div className="space-y-6 pb-20">
+                                        {orders.map(o => (
+                                            <div key={o.id} className="bg-white p-7 rounded-[3rem] border-2 border-slate-200 shadow-lg space-y-4">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <p className="text-[10px] font-black text-orange-600 mb-1 uppercase tracking-widest">{o.id}</p>
+                                                        <h3 className="font-black text-slate-900 text-lg leading-tight">{o.companyName || '個人'} - {o.customerName}</h3>
+                                                        <p className="text-[10px] font-bold text-slate-400 mt-1">{o.date}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-xl font-black text-slate-900">${o.totalAmount}</p>
+                                                        <span className="text-[9px] font-black text-slate-300 uppercase">Total Amount</span>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => exportCSV(o)} className="w-full py-4 bg-slate-100 text-slate-900 rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all">
+                                                    <FileSpreadsheet className="w-4 h-4" /> 下載 EXCEL 報表
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </main>
+
+                    {editModal && (
+                        <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-lg flex items-center justify-center p-6">
+                            <div className="bg-white w-full max-w-sm rounded-[3.5rem] p-10 space-y-6 shadow-2xl relative fade-in">
+                                <button onClick={() => setEditModal(null)} className="absolute top-8 right-8 text-slate-400"><X size={24} /></button>
+                                <h3 className="font-black text-2xl text-slate-900 italic tracking-tighter">商品主檔維護</h3>
+                                <div className="space-y-4">
+                                    <input className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl font-bold" placeholder="分類" value={editModal.category} onChange={e=>setEditModal({...editModal, category: e.target.value})} />
+                                    <input className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl font-bold" placeholder="名稱" value={editModal.name} onChange={e=>setEditModal({...editModal, name: e.target.value})} />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl font-bold" type="number" placeholder="批價" value={editModal.wholesalePrice} onChange={e=>setEditModal({...editModal, wholesalePrice: Number(e.target.value)})} />
+                                        <input className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl font-bold" type="number" placeholder="零售價" value={editModal.retailPrice} onChange={e=>setEditModal({...editModal, retailPrice: Number(e.target.value)})} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl font-bold" type="number" placeholder="總庫存" value={editModal.stock} onChange={e=>setEditModal({...editModal, stock: Number(e.target.value)})} />
+                                        <input className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl font-bold" type="number" placeholder="架上數" value={editModal.onShelfCount} onChange={e=>setEditModal({...editModal, onShelfCount: Number(e.target.value)})} />
+                                    </div>
+                                </div>
+                                <button onClick={()=>{
+                                    setProducts(prev => {
+                                        const exists = prev.find(p=>p.id===editModal.id);
+                                        return exists ? prev.map(p => p.id === editModal.id ? editModal : p) : [...prev, editModal];
+                                    });
+                                    setEditModal(null);
+                                }} className="w-full py-5 bg-orange-600 text-white rounded-[3rem] font-black text-xl shadow-xl active:scale-95 transition-all">儲存變更</button>
+                            </div>
+                        </div>
+                    )}
+
+                    <nav className="bg-white border-t-2 border-slate-200 py-4 pb-10 px-8 flex justify-around items-center shadow-[0_-15px_40px_rgba(0,0,0,0.1)] z-50 shrink-0 rounded-t-[3.5rem]">
+                        {userRole === 'customer' && <NavButton active={view === 'order'} icon={<LayoutGrid size={24}/>} label="下單" onClick={()=>setView('order')} />}
+                        {userRole === 'admin' && <NavButton active={view === 'inventory'} icon={<ClipboardCheck size={24}/>} label="盤點" onClick={()=>setView('inventory')} />}
+                        <NavButton active={view === 'history'} icon={<History size={24}/>} label="紀錄" onClick={()=>setView('history')} />
+                        <NavButton active={false} icon={<LogOut size={24}/>} label="登出" onClick={()=>{setView('auth'); setUserRole(null); setCart([]); setAuthInput({username:'', password:''});}} />
+                    </nav>
+                </div>
+            );
+        };
+
+        const NavButton = ({ active, icon, label, onClick }) => (
+            <button onClick={onClick} className={`flex flex-col items-center justify-center transition-all ${active ? 'text-orange-600 scale-110' : 'text-slate-400'}`}>
+                <div className={`p-4 rounded-3xl ${active ? 'bg-orange-50' : ''}`}>{icon}</div>
+                <span className="text-[10px] font-black mt-1 uppercase">{label}</span>
+            </button>
+        );
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
